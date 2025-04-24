@@ -16,11 +16,12 @@ import models.Professor;
 
 public class GeradorHTML {
 
-    /* ---------- GERA UM ÚNICO HTML COM 3 TABELAS ---------- */
+    /* ---------- GERA HTML COM 4 TABELAS ---------- */
     public static void gerarArquivoCompleto(
             Map<Materia, Professor> associacoes,
             Populacao populacao,
-            Individuo[] selecionados,          // ← novos “pais”
+            Individuo[] selecionados,   // pais
+            Individuo[] filhos,         // ← NOVO
             String arquivo) throws IOException {
 
         StringBuilder h = new StringBuilder();
@@ -35,11 +36,10 @@ public class GeradorHTML {
             </style></head><body>
             """);
 
-        /* ---------- 1. TABELA ASSOCIAÇÃO ---------- */
+        /* ---------- 1. Associação ---------- */
         h.append("<h2>Associação Professor × Matéria</h2><table>")
          .append("<tr><th>Período</th><th>Matéria</th><th>Cód.Mat.</th>")
          .append("<th>Professor</th><th>Cód.Prof</th><th>Comb.</th></tr>");
-
         associacoes.entrySet().stream()
                    .sorted(Comparator.comparing(e -> e.getKey().getCodigo()))
                    .forEach(e -> {
@@ -55,49 +55,23 @@ public class GeradorHTML {
                    });
         h.append("</table>");
 
-        /* ---------- helper para imprimir qualquer lista de indivíduos ---- */
-        java.util.function.BiConsumer<java.util.Collection<Individuo>,String>
-            imprimeTabela = (colecao,titulo) -> {
-                h.append("<h2>").append(titulo).append("</h2><table><tr>");
-                for (int i=1;i<=100;i++) h.append("<th>").append(i).append("</th>");
-                h.append("<th>Conflitos</th></tr>");
+        /* ---------- Helper para imprimir indivíduos ---------- */
+        java.util.function.BiConsumer<Individuo[],String> imprimeArr =
+                (arr,tit) -> imprimeTabela(h, java.util.List.of(arr), tit);
+        java.util.function.BiConsumer<java.util.List<Individuo>,String> imprimeList =
+                (lst,tit) -> imprimeTabela(h, lst, tit);
 
-                for (Individuo ind : colecao) {
-                    String[] genes = ind.getGenes();
+        /* 2. População completa */
+        imprimeList.accept(populacao.getIndividuos(),
+                           "População Inicial ("+populacao.getTamanho()+" × 100)");
 
-                    /* ----- máscara de conflito ----- */
-                    boolean[] confl = new boolean[100];
-                    for (int slot=0;slot<20;slot++){
-                        Map<String,Integer> first = new HashMap<>();
-                        for (int per=0;per<5;per++){
-                            int col = per*20+slot;
-                            String prof = genes[col].substring(0,2);
-                            Integer prev = first.putIfAbsent(prof,col);
-                            if(prev!=null){ confl[prev]=confl[col]=true; }
-                        }
-                    }
+        /* 3. Selecionados (pais) */
+        imprimeArr.accept(selecionados, "Selecionados Aleatoriamente");
 
-                    h.append("<tr>");
-                    for (int c=0;c<100;c++){
-                        if(confl[c]) h.append("<td class='conf'>")
-                                      .append(genes[c]).append("</td>");
-                        else         h.append("<td>")
-                                      .append(genes[c]).append("</td>");
-                    }
-                    h.append("<td>").append(ind.getConflitos()).append("</td></tr>");
-                }
-                h.append("</table>");
-        };
+        /* 4. Filhos gerados por crossover */
+        imprimeArr.accept(filhos, "Filhos (Crossover de 1 ponto)");
 
-        /* ---------- 2. POPULAÇÃO COMPLETA ---------- */
-        imprimeTabela.accept(populacao.getIndividuos(),
-                             "População Inicial ("+populacao.getTamanho()+" × 100)");
-
-        /* ---------- 3. INDIVÍDUOS SELECIONADOS ---------- */
-        imprimeTabela.accept(java.util.List.of(selecionados),
-                             "Selecionados Aleatoriamente (2 indivíduos)");
-
-        /* ---------- grava arquivo e abre ---------- */
+        /* ---------- Grava e abre ---------- */
         try (BufferedWriter w = new BufferedWriter(new FileWriter(arquivo))) {
             w.write(h.toString());
         }
@@ -106,5 +80,38 @@ public class GeradorHTML {
             Desktop.getDesktop().browse(f.toURI());
         else
             System.out.println("Abra manualmente: " + f.getAbsolutePath());
+    }
+
+    /* ---------- função utilitária interna ---------- */
+    private static void imprimeTabela(StringBuilder h,
+                                      java.util.Collection<Individuo> col,
+                                      String titulo) {
+
+        h.append("<h2>").append(titulo).append("</h2><table><tr>");
+        for(int i=1;i<=100;i++) h.append("<th>").append(i).append("</th>");
+        h.append("<th>Conflitos</th></tr>");
+
+        for(Individuo ind: col){
+            String[] genes = ind.getGenes();
+
+            boolean[] confl = new boolean[100];
+            for(int slot=0;slot<20;slot++){
+                Map<String,Integer> first = new HashMap<>();
+                for(int per=0;per<5;per++){
+                    int colIdx = per*20+slot;
+                    String prof = genes[colIdx].substring(0,2);
+                    Integer prev = first.putIfAbsent(prof,colIdx);
+                    if(prev!=null) confl[prev]=confl[colIdx]=true;
+                }
+            }
+
+            h.append("<tr>");
+            for(int c=0;c<100;c++){
+                if(confl[c]) h.append("<td class='conf'>").append(genes[c]).append("</td>");
+                else         h.append("<td>").append(genes[c]).append("</td>");
+            }
+            h.append("<td>").append(ind.getConflitos()).append("</td></tr>");
+        }
+        h.append("</table>");
     }
 }

@@ -1,4 +1,5 @@
 /* ───────── src/App.java ───────── */
+import generator.Cruzador;
 import generator.GeradorHTML;
 import generator.PopInicial;
 import java.util.Comparator;
@@ -12,26 +13,27 @@ public class App {
 
     public static void main(String[] args) throws Exception {
 
-        /* 1. Associação professor × matéria ------------------------ */
         Map<Materia, Professor> associacoes =
                 PopInicial.associarProfessoresAMaterias();
 
-        /* 2. População inicial (50 indivíduos × 100 genes) -------- */
-        Populacao populacao =
-                PopInicial.gerarPopulacaoInicial(associacoes, 50);
+        Populacao populacao = PopInicial.gerarPopulacaoInicial(associacoes, 50);
 
-        /* 3. Ordena pelos indivíduos com MENOS conflitos ---------- */
+        /* Ordena por menos conflitos (opcional, só para exibir ordenado) */
         populacao.getIndividuos().sort(
                 Comparator.comparingInt(Individuo::getConflitos));
 
-        /* 4. Seleciona 2 indivíduos aleatórios -------------------- */
-        Individuo[] selecionados = populacao.sortearDois();
+        /* Seleciona dois pais aleatórios */
+        Individuo[] pais = populacao.sortearDois();
 
-        /* 5. Gera o HTML com 3 quadros ---------------------------- */
+        /* Gera dois filhos via crossover de 1 ponto */
+        Individuo[] filhos = Cruzador.cruzarUmPonto(pais[0], pais[1]);
+
+        /* Exporta HTML com 4 quadros */
         GeradorHTML.gerarArquivoCompleto(
                 associacoes,
                 populacao,
-                selecionados,
+                pais,
+                filhos,          // ← novos filhos
                 "horario.html"
         );
 

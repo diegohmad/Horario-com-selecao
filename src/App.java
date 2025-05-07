@@ -1,4 +1,4 @@
-/* ───────── src/App.java ───────── */
+
 import generator.Cruzador;
 import generator.GeradorHTML;
 import generator.PopInicial;
@@ -13,27 +13,31 @@ public class App {
 
     public static void main(String[] args) throws Exception {
 
-        Map<Materia, Professor> associacoes =
-                PopInicial.associarProfessoresAMaterias();
+        /* 1. Gera associações professor × matéria */
+        Map<Materia, Professor> associacoes
+                = PopInicial.associarProfessoresAMaterias();
 
+        /* 2. População inicial (50 indivíduos × 100 genes) */
         Populacao populacao = PopInicial.gerarPopulacaoInicial(associacoes, 50);
 
-        /* Ordena por menos conflitos (opcional, só para exibir ordenado) */
-        populacao.getIndividuos().sort(
-                Comparator.comparingInt(Individuo::getConflitos));
+        /* 3. Ordena por menos conflitos (só para exibir mais organizado) */
+        populacao.getIndividuos()
+                .sort(Comparator.comparingInt(Individuo::getConflitos));
 
-        /* Seleciona dois pais aleatórios */
-        Individuo[] pais = populacao.sortearDois();
+        /* 4. Seleciona pais seguindo a nova regra:
+              Pai 1 no top-50 %, Pai 2 qualquer um */
+        Individuo[] pais = populacao.sortearDoisCompetitivo();
 
-        /* Gera dois filhos via crossover de 1 ponto */
-        Individuo[] filhos = Cruzador.cruzarUmPonto(pais[0], pais[1]);
+        /* 5. Gera dois filhos via crossover por períodos aleatórios */
+        Individuo[] filhos = Cruzador.cruzarPorPeriodosAleatorios(pais[0], pais[1]);
 
-        /* Exporta HTML com 4 quadros */
+
+        /* 6. Exporta HTML com quatro quadros (inclui filhos) */
         GeradorHTML.gerarArquivoCompleto(
                 associacoes,
                 populacao,
-                pais,
-                filhos,          // ← novos filhos
+                pais, // tabela 3
+                filhos, // tabela 4
                 "horario.html"
         );
 
